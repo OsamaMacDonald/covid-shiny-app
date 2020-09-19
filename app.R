@@ -45,7 +45,7 @@ ui <- fluidPage(
     tabPanel(
       title = "Government Policy Responses to Covid-19",
       
-      fluidRow(
+      fluidRow( 
         selectInput("response_country1",
                     "Select Country", 
                     multiple = FALSE, 
