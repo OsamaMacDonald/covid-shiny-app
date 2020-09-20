@@ -31,8 +31,8 @@ ui <- fluidPage(
                       choices = unique(response$CountryName),
                       selected = "United Kingdom"),
           
-          selectInput("datatype", 
-                      "Select Data", 
+          selectInput("cd", 
+                      "Select Cases/Deaths", 
                       choices= c("DailyCases", "DailyDeaths"),
                       selected = "DailyCases"),
           checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE)),
@@ -82,7 +82,7 @@ ui <- fluidPage(
       DT::DTOutput("codebook")),
     
     tabPanel(
-      title = "Analysis Plotting",
+      title = "Analysis Plot Renders",
       
       fluidRow(
         column(2,
@@ -91,22 +91,20 @@ ui <- fluidPage(
                            multiple = FALSE, 
                            choices = unique(response$CountryName),
                            selected = "United Kingdom")),
-
+        
         column(2,  
                selectInput("label2",
                            "Select Policies",
                            multiple = TRUE, 
                            choices = unique(response$policy),
-                           selected = "Sch")),
-      
-      
-      column(6, 
-             plotOutput("country_plot_cases")),
-            
-      column(6,
-             plotOutput("country_plot_deaths")),
-      
-      DT::DTOutput("codebook"))) 
+                           selected = "Sch"))),
+        
+        
+               plotOutput("country_plot_render"),
+      downloadButton("download", 
+                     "Download Plot"))
+    
+ 
       
   )
 )
@@ -120,7 +118,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  
+## Tab 1 ----------------------------------------------------------------------  
   
   output$plot <- renderPlot({
     
@@ -129,7 +127,7 @@ server <- function(input, output) {
       filter(RegionName == "",
              DailyCases >= 0)## there are negative values in the datasets for some reason, i will just filter out for now 
     
-    ggline <- ggplot(plot.data, aes_string(y = input$datatype)) + ## need to use aes_string to read input$datatype  
+    ggline <- ggplot(plot.data, aes_string(y = input$cd)) + ## need to use aes_string to read input$datatype  
       geom_line(mapping = aes(x = Date, colour = CountryName)) +
       labs(title = "Covid-19 Cases and Deaths Over Time",
            subtitle = "Comparing multiple countries",
@@ -147,7 +145,7 @@ server <- function(input, output) {
     
   })
   
-  
+## Tab 2 -------------------------------------------------------------------- 
   
   output$country1_cases <- renderPlot({
     
@@ -189,7 +187,9 @@ server <- function(input, output) {
       labs(title = paste(input$response_country1, "Covid-19 Cases over time"),
            y = "Cases",
            x = "Date") +
-      theme_classic()
+      theme_classic() +
+      theme(text = element_text(size=20))
+    
     
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
     ## major issue with the plot. 
@@ -237,7 +237,9 @@ server <- function(input, output) {
       labs(title = paste(input$response_country1, "Covid-19 Deaths over time"),
            y = "Deaths",
            x = "Date") +
-      theme_classic()
+      theme_classic() +
+        theme(text = element_text(size=20))
+      
     
   })
   
@@ -282,7 +284,9 @@ server <- function(input, output) {
       labs(title = paste(input$response_country2, "Covid-19 Cases over time"),
            y = "Cases",
            x = "Date") +
-      theme_classic()
+      theme_classic() +
+      theme(text = element_text(size=20))
+    
     
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
     ## major issue with the plot. 
@@ -330,8 +334,10 @@ server <- function(input, output) {
       labs(title = paste(input$response_country2, "Covid-19 Deaths over time"),
            y = "Deaths",
            x = "Date") +
-      theme_classic()
+      theme_classic() +
+      theme(text = element_text(size=20))
     
+ 
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
     ## major issue with the plot. 
     
@@ -344,11 +350,81 @@ server <- function(input, output) {
   })
 
   
+## Tab 3 ----------------------------------------------------------------------
+ 
+   vals <- reactiveValues()
+  
+  output$country_plot_render <- renderPlot({
+    
+    
+    labels1 <- response %>%
+      filter(CountryName == input$country_plot,
+             RegionName == "") %>%
+      arrange(policy) %>%
+      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
+    
+    
+    
+    
+    policy_filter <- c()
+    
+    for(i in 1:length(labels1$value)){
+      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
+                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    }
+    
+    df <- cbind(labels1, policy_filter)
+    
+    
+    
+    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
+    
+    lab1 <- policy_start %>%
+      filter(policy %in% input$label1)
+    
+    
+    gg <-response %>%
+      filter(CountryName == input$country_plot,
+             RegionName == "") %>%
+      ggplot() +
+      geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
+      geom_text_repel(data = lab1, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
+      labs(title = paste(input$response_country1, "Covid-19 Cases over time"),
+           y = "Cases",
+           x = "Date") +
+      theme_classic() +
+      theme(text = element_text(size=20))
+
+ 
+    
+    print(gg)
+    
+    vals$gg <- gg
+
+  })
+  
+
+
+
+
+output$download <- downloadHandler(
+  filename = function(){paste(input$country_plot, '.pdf', sep = '')},
+  
+  content = function(file){
+    pdf(file, width = 18 , height = 8)
+    print(vals$gg)
+    dev.off()
+  })
 }
+
+  
+
 
 
 ## it wasn't plotting the multiple lines correctly before but it is now, no idea why. 
 shinyApp(ui = ui, server = server)
+
+
 
 
 
