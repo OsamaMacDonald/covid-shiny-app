@@ -7,7 +7,6 @@ library(lubridate)
 library(scales)
 library(shinythemes)
 library(ggrepel)
-library(plotly)
 response <- read.csv("response_clean.csv")
 
 ## Setting Date Format
@@ -101,8 +100,11 @@ ui <- fluidPage(
         
         
                plotOutput("country_plot_render"),
+      fluidRow(
       downloadButton("download", 
-                     "Download Plot"))
+                     "Download Plot"),
+      downloadButton("download2",
+                     "Download Policy Data")))
     
  
       
@@ -354,10 +356,10 @@ server <- function(input, output) {
  
    vals <- reactiveValues()
   
-  output$country_plot_render <- renderPlot({
+  labels <- reactive({
     
     
-    labels1 <- response %>%
+    label2 <- response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       arrange(policy) %>%
@@ -366,29 +368,37 @@ server <- function(input, output) {
     
     
     
-    policy_filter <- c()
+    policy_filter2 <- c()
     
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    for(i in 1:length(label2$value)){
+      policy_filter2[i] <- case_when(label2$value[i]>0 & label2$value[i]!=label2$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
+                                     label2$value[i]>0 & label2$value[i]!=label2$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
     }
     
-    df <- cbind(labels1, policy_filter)
+    df2 <- cbind(label2, policy_filter2)
     
     
     
-    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
+    policy_start2 = df2 %>% drop_na() %>% filter(policy_filter2 == "start")
     
-    lab1 <- policy_start %>%
-      filter(policy %in% input$label1)
+    labs2 <- policy_start2 %>%
+      filter(policy %in% input$label2)
     
     
+    
+  })
+  
+  output$country_plot_render <- renderPlot({
+
+   labs2 <- labels() 
+   
+   
     gg <-response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       ggplot() +
       geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = lab1, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
+      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
       labs(title = paste(input$response_country1, "Covid-19 Cases over time"),
            y = "Cases",
            x = "Date") +
@@ -415,6 +425,19 @@ output$download <- downloadHandler(
     print(vals$gg)
     dev.off()
   })
+
+
+output$download2 <- downloadHandler(
+  filename = function(){paste(input$country_plot, '.csv', sep = '')},
+  
+  content = function(file){
+    
+    write.csv(labels(), file)
+  })
+
+
+
+
 }
 
   
@@ -423,6 +446,8 @@ output$download <- downloadHandler(
 
 ## it wasn't plotting the multiple lines correctly before but it is now, no idea why. 
 shinyApp(ui = ui, server = server)
+
+
 
 
 
