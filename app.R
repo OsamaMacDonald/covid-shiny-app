@@ -149,10 +149,8 @@ server <- function(input, output) {
   
 ## Tab 2 -------------------------------------------------------------------- 
   
-  output$country1_cases <- renderPlot({
-    
-    ## make labels reactive variable 
-    
+  
+  label <- reactive({
     
     labels1 <- response %>%
       filter(CountryName == input$response_country1,
@@ -178,6 +176,16 @@ server <- function(input, output) {
     
     lab1 <- policy_start %>%
       filter(policy %in% input$label1)
+    
+    
+  })
+  
+  output$country1_cases <- renderPlot({
+    
+    ## make labels reactive variable 
+    
+    lab1 <- label()
+    
     
 
     response %>%
@@ -202,32 +210,7 @@ server <- function(input, output) {
   
   output$country1_deaths <- renderPlot({
     
-    
-    labels1 <- response %>%
-      filter(CountryName == input$response_country1,
-             RegionName == "") %>%
-      arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
-    
-    
-    
-    
-    policy_filter <- c()
-    
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
-    }
-    
-    df <- cbind(labels1, policy_filter)
-    
-    
-    
-    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
-    
-    lab1 <- policy_start %>%
-      filter(policy %in% input$label1)
-
+    lab1 <- label()
     
 
       response %>%
@@ -250,32 +233,7 @@ server <- function(input, output) {
     
     ## make labels reactive variable 
     
-    
-    labels1 <- response %>%
-      filter(CountryName == input$response_country2,
-             RegionName == "") %>%
-      arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
-    
-    
-    
-    
-    policy_filter <- c()
-    
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
-    }
-    
-    df <- cbind(labels1, policy_filter)
-    
-    
-    
-    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
-    
-    lab1 <- policy_start %>%
-      filter(policy %in% input$label1)
-    
+    lab1 <- label()
     
     response %>%
       filter(CountryName == input$response_country2,
@@ -300,31 +258,7 @@ server <- function(input, output) {
     
     ## make labels reactive variable 
     
-    
-    labels1 <- response %>%
-      filter(CountryName == input$response_country2,
-             RegionName == "") %>%
-      arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
-    
-    
-    
-    
-    policy_filter <- c()
-    
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
-    }
-    
-    df <- cbind(labels1, policy_filter)
-    
-    
-    
-    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
-    
-    lab1 <- policy_start %>%
-      filter(policy %in% input$label1)
+    lab1 <- label()
     
     
     response %>%
@@ -363,7 +297,7 @@ server <- function(input, output) {
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
+      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths, ConfirmedCases, ConfirmedDeaths)
     
     
     
