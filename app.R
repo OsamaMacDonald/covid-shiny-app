@@ -98,14 +98,21 @@ ui <- fluidPage(
                            multiple = TRUE, 
                            choices = unique(response$policy),
                            selected = "Sch"))),
-       column(12,  
+       column(8,  
                plotOutput("country_plot_render"),
       
      fluidRow(
       downloadButton("download", 
                      "Download Plot"),
       downloadButton("download2",
-                     "Download Policy Data"))))
+                     "Download Policy Data"))),
+     
+     column(8, 
+            plotOutput("country_plot_render2"),
+      fluidRow(
+        downloadButton("download3",
+                       "Download Plot")
+      )))
     
  
       
@@ -346,7 +353,7 @@ server <- function(input, output) {
     
     
     
-    policy_start2 = df2 %>% drop_na() %>% filter(policy_filter2 == "start")
+    policy_start2 = df2 %>% drop_na() 
     
     labs2 <- policy_start2 %>%
       filter(policy %in% input$label2)
@@ -359,19 +366,19 @@ server <- function(input, output) {
     
 
    labs2 <- labels() 
-   
+   labs2 <- labs2 %>% filter(policy_filter2 == "start")
    
     gg <-response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       ggplot() +
       geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), direction = "y", force = 5, min.segment.length = 100, size = 4.5) +
+      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), direction = "y", force = 6, min.segment.length = 100, size = 4.5) +
       labs(title = paste(input$country_plot, "Covid-19 Cases over time"),
            y = "Cases",
            x = "Date") +
       scale_y_continuous(breaks= pretty_breaks()) +
-      scale_x_date(date_breaks = "months" , date_labels = "%d-%B",
+      scale_x_date(date_breaks = "months" , date_labels = "%d-%b",
                    expand = c(0, 0)) +
       theme_classic() +
       theme(text = element_text(size=20))
@@ -384,12 +391,42 @@ server <- function(input, output) {
 
   })
   
+  vals2 <- reactiveValues()
+  
+  output$country_plot_render2 <- renderPlot({
+    
+    
+    labs2 <- labels() 
+    labs2 <- labs2 %>% filter(policy_filter2 == "start")
+    
+    gg2 <-response %>%
+      filter(CountryName == input$country_plot,
+             RegionName == "") %>%
+      ggplot() +
+      geom_col(aes(x = Date, y = DailyDeaths), position = "dodge", width = .3, alpha = 0.01) +
+      geom_text_repel(data = labs2, aes(x = Date, y = DailyDeaths, label = paste(policy,"",value)), direction = "y", force = 6, min.segment.length = 100, size = 4.5) +
+      labs(title = paste(input$country_plot, "Covid-19 Deaths over time"),
+           y = "Cases",
+           x = "Date") +
+      scale_y_continuous(breaks= pretty_breaks()) +
+      scale_x_date(date_breaks = "months" , date_labels = "%d-%b",
+                   expand = c(0, 0)) +
+      theme_classic() +
+      theme(text = element_text(size=20))
+    
+    
+    
+    print(gg2)
+    
+    vals2$gg2 <- gg2
+    
+  })
 
 
 
 
 output$download <- downloadHandler(
-  filename = function(){paste(input$country_plot, '.pdf', sep = '')},
+  filename = function(){paste(input$country_plot, '_cases.pdf', sep = '')},
   
   content = function(file){
     pdf(file, width = 14 , height = 8)
@@ -404,6 +441,16 @@ output$download2 <- downloadHandler(
   content = function(file){
     
     write.csv(labels(), file)
+  })
+
+
+output$download3 <- downloadHandler(
+  filename = function(){paste(input$country_plot, '_deaths.pdf', sep = '')},
+  
+  content = function(file){
+    pdf(file, width = 14 , height = 8)
+    print(vals2$gg2)
+    dev.off()
   })
 
 
