@@ -7,6 +7,7 @@ library(lubridate)
 library(scales)
 library(shinythemes)
 library(ggrepel)
+library(scales)
 response <- read.csv("response_clean.csv")
 
 ## Setting Date Format
@@ -97,14 +98,14 @@ ui <- fluidPage(
                            multiple = TRUE, 
                            choices = unique(response$policy),
                            selected = "Sch"))),
-        
-        
+       column(12,  
                plotOutput("country_plot_render"),
-      fluidRow(
+      
+     fluidRow(
       downloadButton("download", 
                      "Download Plot"),
       downloadButton("download2",
-                     "Download Policy Data")))
+                     "Download Policy Data"))))
     
  
       
@@ -229,11 +230,43 @@ server <- function(input, output) {
   })
   
   
+  label2 <- reactive({
+    
+    labels1 <- response %>%
+      filter(CountryName == input$response_country2,
+             RegionName == "") %>%
+      arrange(policy) %>%
+      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
+    
+    
+    
+    
+    policy_filter <- c()
+    
+    for(i in 1:length(labels1$value)){
+      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
+                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    }
+    
+    df <- cbind(labels1, policy_filter)
+    
+    
+    
+    policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
+    
+    lab1 <- policy_start %>%
+      filter(policy %in% input$label1)
+    
+    
+  })
+  
+  
+  
   output$country2_cases <- renderPlot({
     
     ## make labels reactive variable 
     
-    lab1 <- label()
+    lab1 <- label2()
     
     response %>%
       filter(CountryName == input$response_country2,
@@ -258,7 +291,7 @@ server <- function(input, output) {
     
     ## make labels reactive variable 
     
-    lab1 <- label()
+    lab1 <- label2()
     
     
     response %>%
@@ -323,6 +356,7 @@ server <- function(input, output) {
   })
   
   output$country_plot_render <- renderPlot({
+    
 
    labs2 <- labels() 
    
@@ -332,10 +366,13 @@ server <- function(input, output) {
              RegionName == "") %>%
       ggplot() +
       geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
-      labs(title = paste(input$response_country1, "Covid-19 Cases over time"),
+      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), direction = "y", force = 5, min.segment.length = 100, size = 4.5) +
+      labs(title = paste(input$country_plot, "Covid-19 Cases over time"),
            y = "Cases",
            x = "Date") +
+      scale_y_continuous(breaks= pretty_breaks()) +
+      scale_x_date(date_breaks = "months" , date_labels = "%d-%B",
+                   expand = c(0, 0)) +
       theme_classic() +
       theme(text = element_text(size=20))
 
@@ -355,7 +392,7 @@ output$download <- downloadHandler(
   filename = function(){paste(input$country_plot, '.pdf', sep = '')},
   
   content = function(file){
-    pdf(file, width = 18 , height = 8)
+    pdf(file, width = 14 , height = 8)
     print(vals$gg)
     dev.off()
   })
