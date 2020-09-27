@@ -16,164 +16,240 @@ response$Date <- ymd(response$Date)
 codebook <- read.csv("codebook.csv")
 
 
+
 ## Shiny App code -------------------------------------------------------------
 ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
   tabsetPanel(
-    tabPanel(
-      title = "Daily Covid-19 cases and deaths by day",
-      sidebarLayout(
-        sidebarPanel(
-          
-          selectInput("country",
-                      "Select Country",
-                      multiple = TRUE,
-                      choices = unique(response$CountryName),
-                      selected = "United Kingdom"),
-          
-          selectInput("cd", 
-                      "Select Cases/Deaths", 
-                      choices= c("DailyCases", "DailyDeaths"),
-                      selected = "DailyCases"),
-          checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE)),
-        
-          
-
-        
-       mainPanel(
-         plotOutput("plot"))),
-    ),
+    tabPanel(title = "Daily Covid-19 cases and deaths by day",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput(
+                   "country",
+                   "Select Country",
+                   multiple = TRUE,
+                   choices = unique(response$CountryName),
+                   selected = "United Kingdom"
+                 ),
+                 
+                 selectInput(
+                   "cd",
+                   "Select Cases/Deaths",
+                   choices = c("DailyCases", "DailyDeaths"),
+                   selected = "DailyCases"
+                 ),
+                 checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE)
+               ),
+               
+               
+               
+               
+               mainPanel(plotOutput("plot"))
+             ), ),
     
     tabPanel(
       title = "Government Policy Responses to Covid-19",
       
       fluidRow(
-      column(2,
-        selectInput("response_country1",
-                    "Select First Country", 
-                    multiple = FALSE, 
-                    choices = unique(response$CountryName),
-                    selected = "United Kingdom")),
-
-      column(2,
-             selectInput("response_country2",
-                            "Select Second Country", 
-                            multiple = FALSE, 
-                            choices = unique(response$CountryName),
-                         selected = "Germany")),
-      column(2,  
-             selectInput("label1",
-                         "Select Policies",
-                         multiple = TRUE, 
-                         choices = unique(response$policy),
-                         selected = "Sch"))),
+        column(
+          2,
+          selectInput(
+            "response_country1",
+            "Select First Country",
+            multiple = FALSE,
+            choices = unique(response$CountryName),
+            selected = "United Kingdom"
+          )
+        ),
+        
+        column(
+          2,
+          selectInput(
+            "response_country2",
+            "Select Second Country",
+            multiple = FALSE,
+            choices = unique(response$CountryName),
+            selected = "Germany"
+          )
+        ),
+        column(
+          2,
+          selectInput(
+            "label1",
+            "Select Policies",
+            multiple = TRUE,
+            choices = unique(response$policy),
+            selected = "Sch"
+          )
+        )
+      ),
       
       
-      column(6, 
+      column(
+        6,
         plotOutput("country1_cases"),
-        plotOutput("country2_cases")), 
+        plotOutput("country2_cases")
+      ),
       
-    
       
-      column(6,
+      
+      column(
+        6,
         plotOutput("country1_deaths"),
-        plotOutput("country2_deaths")),
+        plotOutput("country2_deaths")
+      ),
       
-      DT::DTOutput("codebook")),
+      DT::DTOutput("codebook")
+    ),
+    
+    
+    
+    
+    tabPanel(title = "Sub-Regional Policies",
+             
+             fluidRow(column(
+               2,
+               selectInput(
+                 "sub_reg_country",
+                 "Select Country",
+                 multiple = FALSE,
+                 choices = unique(response$CountryName),
+                 selected = "United Kingdom"
+               )),
+               
+               
+               column(
+                 2,
+               
+               selectInput(
+                 "select_region",
+                 "Select Region",
+                 multiple = FALSE,
+                 choices = unique(response$RegionName)
+               )
+             ))),
+    
+    
     
     tabPanel(
       title = "Analysis Plot Renders",
       
-      fluidRow(
-        column(2,
-               selectInput("country_plot",
-                           "Select Country", 
-                           multiple = FALSE, 
-                           choices = unique(response$CountryName),
-                           selected = "United Kingdom")),
+      fluidRow(column(
+        2,
+        selectInput(
+          "country_plot",
+          "Select Country",
+          multiple = FALSE,
+          choices = unique(response$CountryName),
+          selected = "United Kingdom"
+        )
+      ),
+      
+      column(
+        2,
+        selectInput(
+          "label2",
+          "Select Policies",
+          multiple = TRUE,
+          choices = unique(response$policy),
+          selected = "Sch"
+        )
+      )),
+      column(
+        8,
+        plotOutput("country_plot_render"),
         
-        column(2,  
-               selectInput("label2",
-                           "Select Policies",
-                           multiple = TRUE, 
-                           choices = unique(response$policy),
-                           selected = "Sch"))),
-       column(8,  
-               plotOutput("country_plot_render"),
+        fluidRow(
+          downloadButton("download",
+                         "Download Plot"),
+          downloadButton("download2",
+                         "Download Policy Data")
+        )
+      ),
       
-     fluidRow(
-      downloadButton("download", 
-                     "Download Plot"),
-      downloadButton("download2",
-                     "Download Policy Data"))),
-     
-     column(8, 
-            plotOutput("country_plot_render2"),
-      fluidRow(
-        downloadButton("download3",
-                       "Download Plot")
-      )))
+      column(
+        8,
+        plotOutput("country_plot_render2"),
+        fluidRow(downloadButton("download3",
+                                "Download Plot"))
+      )
+    )
     
- 
-      
+    
+    
   )
 )
-    
-    
-  
 
 
 
-## i need to spend some time making the plot look good, but the basic idea is there. 
+
+
+
+
+## i need to spend some time making the plot look good, but the basic idea is there.
 
 server <- function(input, output) {
-  
-## Tab 1 ----------------------------------------------------------------------  
+  ## Tab 1 ----------------------------------------------------------------------
   
   output$plot <- renderPlot({
-    
     plot.data <- response %>%
       filter(CountryName %in% input$country) %>%
       filter(RegionName == "",
-             DailyCases >= 0)## there are negative values in the datasets for some reason, i will just filter out for now 
+             DailyCases >= 0)## there are negative values in the datasets for some reason, i will just filter out for now
     
-    ggline <- ggplot(plot.data, aes_string(y = input$cd)) + ## need to use aes_string to read input$datatype  
+    ggline <-
+      ggplot(plot.data, aes_string(y = input$cd)) + ## need to use aes_string to read input$datatype
       geom_line(mapping = aes(x = Date, colour = CountryName)) +
-      labs(title = "Covid-19 Cases and Deaths Over Time",
-           subtitle = "Comparing multiple countries",
-           y = "Cases/Deaths",
-           x = "Date") +
+      labs(
+        title = "Covid-19 Cases and Deaths Over Time",
+        subtitle = "Comparing multiple countries",
+        y = "Cases/Deaths",
+        x = "Date"
+      ) +
       theme_fivethirtyeight() +
       theme(axis.title = element_text()) +
       scale_color_brewer(palette = "Set1")
     
-    if(input$logscale)
-      ggline <- ggline + scale_y_log10(breaks = c(1,10,100, 1000, 10000, 100000, 1000000), labels = comma)
+    if (input$logscale)
+      ggline <-
+      ggline + scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+                             labels = comma)
     
     return(ggline)
     
     
   })
   
-## Tab 2 -------------------------------------------------------------------- 
+  ## Tab 2 --------------------------------------------------------------------
   
   
   label <- reactive({
-    
     labels1 <- response %>%
       filter(CountryName == input$response_country1,
              RegionName == "") %>%
       arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
+      select(CountryName,
+             RegionName,
+             Date,
+             policy,
+             value,
+             DailyCases,
+             DailyDeaths)
     
     
     
     
     policy_filter <- c()
     
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    for (i in 1:length(labels1$value)) {
+      policy_filter[i] <-
+        case_when(
+          labels1$value[i] > 0 &
+            labels1$value[i] != labels1$value[i - 1] ~ "start",
+          ## larger than zero and does not equal the previous value
+          labels1$value[i] > 0 &
+            labels1$value[i] != labels1$value[i + 1] ~ "end"
+        ) ## larger than zero and does not equal the next value
     }
     
     df <- cbind(labels1, policy_filter)
@@ -189,70 +265,108 @@ server <- function(input, output) {
   })
   
   output$country1_cases <- renderPlot({
-    
-    ## make labels reactive variable 
+    ## make labels reactive variable
     
     lab1 <- label()
     
     
-
+    
     response %>%
       filter(CountryName == input$response_country1,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = lab1, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
-      labs(title = paste(input$response_country1, "Covid-19 Cases over time"),
-           y = "Cases",
-           x = "Date") +
+      geom_col(
+        aes(x = Date, y = DailyCases),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text_repel(data = lab1,
+                      aes(
+                        x = Date,
+                        y = DailyCases,
+                        label = paste(policy, "", label_number_si()(value))
+                      ),
+                      size = 4.5) +
+      labs(
+        title = paste(input$response_country1, "Covid-19 Cases over time"),
+        y = "Cases",
+        x = "Date"
+      ) +
       theme_classic() +
-      theme(text = element_text(size=20))
+      theme(text = element_text(size = 20))
     
     
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
-    ## major issue with the plot. 
+    ## major issue with the plot.
     
     
   })
   
   
   output$country1_deaths <- renderPlot({
-    
     lab1 <- label()
     
-
-      response %>%
+    
+    response %>%
       filter(CountryName == input$response_country1,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyDeaths), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text(data = lab1, aes(x = Date, y = DailyDeaths, label = paste(policy,"",value)), size = 4.5, check_overlap = TRUE) +
-      labs(title = paste(input$response_country1, "Covid-19 Deaths over time"),
-           y = "Deaths",
-           x = "Date") +
+      geom_col(
+        aes(x = Date, y = DailyDeaths),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text(
+        data = lab1,
+        aes(
+          x = Date,
+          y = DailyDeaths,
+          label = paste(policy, "", label_number_si()(value))
+        ),
+        size = 4.5,
+        check_overlap = TRUE
+      ) +
+      labs(
+        title = paste(input$response_country1, "Covid-19 Deaths over time"),
+        y = "Deaths",
+        x = "Date"
+      ) +
       theme_classic() +
-        theme(text = element_text(size=20))
-      
+      theme(text = element_text(size = 20))
+    
     
   })
   
   
   label2 <- reactive({
-    
     labels1 <- response %>%
       filter(CountryName == input$response_country2,
              RegionName == "") %>%
       arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths)
+      select(CountryName,
+             RegionName,
+             Date,
+             policy,
+             value,
+             DailyCases,
+             DailyDeaths)
     
     
     
     
     policy_filter <- c()
     
-    for(i in 1:length(labels1$value)){
-      policy_filter[i] <- case_when(labels1$value[i]>0 & labels1$value[i]!=labels1$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                    labels1$value[i]>0 & labels1$value[i]!=labels1$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    for (i in 1:length(labels1$value)) {
+      policy_filter[i] <-
+        case_when(
+          labels1$value[i] > 0 &
+            labels1$value[i] != labels1$value[i - 1] ~ "start",
+          ## larger than zero and does not equal the previous value
+          labels1$value[i] > 0 &
+            labels1$value[i] != labels1$value[i + 1] ~ "end"
+        ) ## larger than zero and does not equal the next value
     }
     
     df <- cbind(labels1, policy_filter)
@@ -270,8 +384,7 @@ server <- function(input, output) {
   
   
   output$country2_cases <- renderPlot({
-    
-    ## make labels reactive variable 
+    ## make labels reactive variable
     
     lab1 <- label2()
     
@@ -279,24 +392,36 @@ server <- function(input, output) {
       filter(CountryName == input$response_country2,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = lab1, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), size = 4.5) +
-      labs(title = paste(input$response_country2, "Covid-19 Cases over time"),
-           y = "Cases",
-           x = "Date") +
+      geom_col(
+        aes(x = Date, y = DailyCases),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text_repel(data = lab1,
+                      aes(
+                        x = Date,
+                        y = DailyCases,
+                        label = paste(policy, "", label_number_si()(value))
+                      ),
+                      size = 4.5) +
+      labs(
+        title = paste(input$response_country2, "Covid-19 Cases over time"),
+        y = "Cases",
+        x = "Date"
+      ) +
       theme_classic() +
-      theme(text = element_text(size=20))
+      theme(text = element_text(size = 20))
     
     
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
-    ## major issue with the plot. 
+    ## major issue with the plot.
     
     
   })
   
   output$country2_deaths <- renderPlot({
-    
-    ## make labels reactive variable 
+    ## make labels reactive variable
     
     lab1 <- label2()
     
@@ -305,17 +430,30 @@ server <- function(input, output) {
       filter(CountryName == input$response_country2,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyDeaths), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = lab1, aes(x = Date, y = DailyDeaths, label = paste(policy,"",value)), size = 4.5) +
-      labs(title = paste(input$response_country2, "Covid-19 Deaths over time"),
-           y = "Deaths",
-           x = "Date") +
+      geom_col(
+        aes(x = Date, y = DailyDeaths),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text_repel(data = lab1,
+                      aes(
+                        x = Date,
+                        y = DailyDeaths,
+                        label = paste(policy, "", label_number_si()(value))
+                      ),
+                      size = 4.5) +
+      labs(
+        title = paste(input$response_country2, "Covid-19 Deaths over time"),
+        y = "Deaths",
+        x = "Date"
+      ) +
       theme_classic() +
-      theme(text = element_text(size=20))
+      theme(text = element_text(size = 20))
     
- 
+    
     ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
-    ## major issue with the plot. 
+    ## major issue with the plot.
     
     
   })
@@ -324,36 +462,50 @@ server <- function(input, output) {
   output$codebook <- DT::renderDT({
     codebook
   })
-
   
-## Tab 3 ----------------------------------------------------------------------
- 
-   vals <- reactiveValues()
+  
+  ## Tab 3 ----------------------------------------------------------------------
+  
+  vals <- reactiveValues()
   
   labels <- reactive({
-    
-    
     label2 <- response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       arrange(policy) %>%
-      select(CountryName, RegionName, Date, policy, value, DailyCases, DailyDeaths, ConfirmedCases, ConfirmedDeaths)
+      select(
+        CountryName,
+        RegionName,
+        Date,
+        policy,
+        value,
+        DailyCases,
+        DailyDeaths,
+        ConfirmedCases,
+        ConfirmedDeaths
+      )
     
     
     
     
     policy_filter2 <- c()
     
-    for(i in 1:length(label2$value)){
-      policy_filter2[i] <- case_when(label2$value[i]>0 & label2$value[i]!=label2$value[i-1] ~ "start", ## larger than zero and does not equal the previous value 
-                                     label2$value[i]>0 & label2$value[i]!=label2$value[i+1] ~ "end") ## larger than zero and does not equal the next value 
+    for (i in 1:length(label2$value)) {
+      policy_filter2[i] <-
+        case_when(
+          label2$value[i] > 0 &
+            label2$value[i] != label2$value[i - 1] ~ "start",
+          ## larger than zero and does not equal the previous value
+          label2$value[i] > 0 &
+            label2$value[i] != label2$value[i + 1] ~ "end"
+        ) ## larger than zero and does not equal the next value
     }
     
     df2 <- cbind(label2, policy_filter2)
     
     
     
-    policy_start2 = df2 %>% drop_na() 
+    policy_start2 = df2 %>% drop_na()
     
     labs2 <- policy_start2 %>%
       filter(policy %in% input$label2)
@@ -363,56 +515,94 @@ server <- function(input, output) {
   })
   
   output$country_plot_render <- renderPlot({
+    labs2 <- labels()
+    labs2 <- labs2 %>% filter(policy_filter2 == "start")
     
-
-   labs2 <- labels() 
-   labs2 <- labs2 %>% filter(policy_filter2 == "start")
-   
-    gg <-response %>%
+    gg <- response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyCases), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = labs2, aes(x = Date, y = DailyCases, label = paste(policy,"",value)), direction = "y", force = 6, min.segment.length = 100, size = 4.5) +
-      labs(title = paste(input$country_plot, "Covid-19 Cases over time"),
-           y = "Cases",
-           x = "Date") +
-      scale_y_continuous(breaks= pretty_breaks()) +
-      scale_x_date(date_breaks = "months" , date_labels = "%d-%b",
-                   expand = c(0, 0)) +
+      geom_col(
+        aes(x = Date, y = DailyCases),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text_repel(
+        data = labs2,
+        aes(
+          x = Date,
+          y = DailyCases,
+          label = paste(policy, "", label_number_si()(value))
+        ),
+        direction = "y",
+        force = 6,
+        min.segment.length = 100,
+        size = 4.5
+      ) +
+      labs(
+        title = paste(input$country_plot, "Covid-19 Cases over time"),
+        y = "Cases",
+        x = "Date"
+      ) +
+      scale_y_continuous(breaks = pretty_breaks()) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) +
       theme_classic() +
-      theme(text = element_text(size=20))
-
- 
+      theme(text = element_text(size = 20))
+    
+    
     
     print(gg)
     
     vals$gg <- gg
-
+    
   })
   
   vals2 <- reactiveValues()
   
   output$country_plot_render2 <- renderPlot({
-    
-    
-    labs2 <- labels() 
+    labs2 <- labels()
     labs2 <- labs2 %>% filter(policy_filter2 == "start")
     
-    gg2 <-response %>%
+    gg2 <- response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
       ggplot() +
-      geom_col(aes(x = Date, y = DailyDeaths), position = "dodge", width = .3, alpha = 0.01) +
-      geom_text_repel(data = labs2, aes(x = Date, y = DailyDeaths, label = paste(policy,"",value)), direction = "y", force = 6, min.segment.length = 100, size = 4.5) +
-      labs(title = paste(input$country_plot, "Covid-19 Deaths over time"),
-           y = "Cases",
-           x = "Date") +
-      scale_y_continuous(breaks= pretty_breaks()) +
-      scale_x_date(date_breaks = "months" , date_labels = "%d-%b",
-                   expand = c(0, 0)) +
+      geom_col(
+        aes(x = Date, y = DailyDeaths),
+        position = "dodge",
+        width = .3,
+        alpha = 0.01
+      ) +
+      geom_text_repel(
+        data = labs2,
+        aes(
+          x = Date,
+          y = DailyDeaths,
+          label = paste(policy, "",  label_number_si()(value))
+        ),
+        direction = "y",
+        force = 6,
+        min.segment.length = 100,
+        size = 4.5
+      ) +
+      labs(
+        title = paste(input$country_plot, "Covid-19 Deaths over time"),
+        y = "Cases",
+        x = "Date"
+      ) +
+      scale_y_continuous(breaks = pretty_breaks()) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) +
       theme_classic() +
-      theme(text = element_text(size=20))
+      theme(text = element_text(size = 20))
     
     
     
@@ -421,44 +611,52 @@ server <- function(input, output) {
     vals2$gg2 <- gg2
     
   })
-
-
-
-
-output$download <- downloadHandler(
-  filename = function(){paste(input$country_plot, '_cases.pdf', sep = '')},
   
-  content = function(file){
-    pdf(file, width = 14 , height = 8)
-    print(vals$gg)
-    dev.off()
-  })
-
-
-output$download2 <- downloadHandler(
-  filename = function(){paste(input$country_plot, '.csv', sep = '')},
   
-  content = function(file){
+  
+  
+  output$download <- downloadHandler(
+    filename = function() {
+      paste(input$country_plot, '_cases.pdf', sep = '')
+    },
     
-    write.csv(labels(), file)
-  })
-
-
-output$download3 <- downloadHandler(
-  filename = function(){paste(input$country_plot, '_deaths.pdf', sep = '')},
+    content = function(file) {
+      pdf(file, width = 14 , height = 8)
+      print(vals$gg)
+      dev.off()
+    }
+  )
   
-  content = function(file){
-    pdf(file, width = 14 , height = 8)
-    print(vals2$gg2)
-    dev.off()
-  })
-
-
-
-
+  
+  output$download2 <- downloadHandler(
+    filename = function() {
+      paste(input$country_plot, '.csv', sep = '')
+    },
+    
+    content = function(file) {
+      write.csv(labels(), file)
+    }
+  )
+  
+  
+  output$download3 <- downloadHandler(
+    filename = function() {
+      paste(input$country_plot, '_deaths.pdf', sep = '')
+    },
+    
+    content = function(file) {
+      pdf(file, width = 14 , height = 8)
+      print(vals2$gg2)
+      dev.off()
+    }
+  )
+  
+  
+  
+  
 }
 
-  
+
 
 
 
