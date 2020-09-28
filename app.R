@@ -10,8 +10,8 @@ library(ggrepel)
 library(scales)
 library(maps)
 library(gganimate)
-library(plotly)
 
+## loading data ---------------------------------------------------------------
 response <- read.csv("response_clean.csv")
 
 ## Setting Date Format
@@ -20,12 +20,17 @@ response$Date <- ymd(response$Date)
 codebook <- read.csv("codebook.csv")
 
 map <- read.csv("time_series_covid19_confirmed_global_narrow_clean.csv")
+
 map$Date <- ymd(map$Date)
 
-## Shiny App code -------------------------------------------------------------
+
+
+## UI code --------------------------------------------------------------------
 ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
   tabsetPanel(
+    
+    ## Panel 1 ----------------------------------------------------------------
     tabPanel(title = "Daily Covid-19 cases and deaths by day",
              sidebarLayout(
                sidebarPanel(
@@ -50,8 +55,8 @@ ui <- fluidPage(
                
                
                mainPanel(plotOutput("plot"))
-             ), ),
-    
+             )),
+    ## Panel 2 ----------------------------------------------------------------
     tabPanel(
       title = "Government Policy Responses to Covid-19",
       
@@ -109,33 +114,32 @@ ui <- fluidPage(
     
     
     
-    
-    tabPanel(title = "Sub-Regional Policies",
+    ## Panel 3 ----------------------------------------------------------------
+    tabPanel(title = "United Kingdom Sub-Regional Policies",
              
-             fluidRow(column(
-               2,
-               selectInput(
-                 "sub_reg_country",
-                 "Select Country",
-                 multiple = FALSE,
-                 choices = unique(response$CountryName),
-                 selected = "United Kingdom"
-               )),
-               
-               
-               column(
-                 2,
-               
-               selectInput(
-                 "select_region",
-                 "Select Region",
-                 multiple = FALSE,
-                 choices = unique(response$RegionName)
-               )
-             ))),
+             selectInput(
+               "uk_regions",
+               "Select Country",
+               multiple = TRUE,
+               choices = c("England", "Scotland", "Wales", "Northern Ireland"),
+               selected = c("England", "Scotland", "Wales", "Northern Ireland")
+             ),
+             
+             selectInput(
+               "cd2",
+               "Select Cases/Deaths",
+               choices = c("DailyCases", "DailyDeaths"),
+               selected = "DailyCases"
+             ),
+             checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE),
+             
+             plotOutput("uk_plot")
+             
+             
+            ),
     
     
-    
+    ## Panel 4 ----------------------------------------------------------------
     tabPanel(
       title = "Analysis Plot Renders",
       
@@ -180,6 +184,7 @@ ui <- fluidPage(
       )
     ),
     
+    ## Panel 5 ----------------------------------------------------------------
     tabPanel(
       title = "World Map",
       
@@ -206,16 +211,21 @@ ui <- fluidPage(
 
 
 
-## i need to spend some time making the plot look good, but the basic idea is there.
+  ## Server Code --------------------------------------------------------------
 
 server <- function(input, output) {
-  ## Tab 1 ----------------------------------------------------------------------
+  ## Tab 1 --------------------------------------------------------------------
+  
+  
   
   output$plot <- renderPlot({
+    
+    # filtering out regional data and negative case values 
     plot.data <- response %>%
       filter(CountryName %in% input$country) %>%
       filter(RegionName == "",
              DailyCases >= 0)## there are negative values in the datasets for some reason, i will just filter out for now
+    
     
     ggline <-
       ggplot(plot.data, aes_string(y = input$cd)) + ## need to use aes_string to read input$datatype
@@ -226,14 +236,20 @@ server <- function(input, output) {
         y = "Cases/Deaths",
         x = "Date"
       ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0) # stops the plot going further than the available dates 
+      ) +
       theme_fivethirtyeight() +
       theme(axis.title = element_text()) +
       scale_color_brewer(palette = "Set1")
     
+    # if statement which adds on a log scale if the box is selected 
     if (input$logscale)
-      ggline <-
-      ggline + scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
-                             labels = comma)
+      ggline <- ggline + 
+        scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+                      labels = comma)
     
     return(ggline)
     
@@ -242,8 +258,10 @@ server <- function(input, output) {
   
   ## Tab 2 --------------------------------------------------------------------
   
-  
+  ## creating a reactive variable as these labels are used multiple times 
   label <- reactive({
+    
+    ## using the country input to filter for a specific countries data 
     labels1 <- response %>%
       filter(CountryName == input$response_country1,
              RegionName == "") %>%
@@ -258,7 +276,8 @@ server <- function(input, output) {
     
     
     
-    
+    ## Finding the start and end date of policies for the purpose of plotting and analysis 
+    ## Currently, only start dates are plotted due to overcrowding. 
     policy_filter <- c()
     
     for (i in 1:length(labels1$value)) {
@@ -272,12 +291,14 @@ server <- function(input, output) {
         ) ## larger than zero and does not equal the next value
     }
     
+    
     df <- cbind(labels1, policy_filter)
     
     
-    
+    # filtering for start dates only 
     policy_start = df %>% drop_na() %>% filter(policy_filter == "start")
     
+    # filtering for policies selected by the user 
     lab1 <- policy_start %>%
       filter(policy %in% input$label1)
     
@@ -285,8 +306,8 @@ server <- function(input, output) {
   })
   
   output$country1_cases <- renderPlot({
-    ## make labels reactive variable
-    
+
+    # assigning the reactive variable function to an object to be used in plotting 
     lab1 <- label()
     
     
@@ -299,15 +320,15 @@ server <- function(input, output) {
         aes(x = Date, y = DailyCases),
         position = "dodge",
         width = .3,
-        alpha = 0.01
+        alpha = 0.01 # making the bars more transparent for better readability of the labels 
       ) +
-      geom_text_repel(data = lab1,
+      geom_text_repel(data = lab1, # geom_text_repel helps with the overcrowding issue 
                       aes(
                         x = Date,
                         y = DailyCases,
-                        label = paste(policy, "", label_number_si()(value))
-                      ),
-                      size = 4.5) +
+                        label = paste(policy, "", label_number_si()(value)) # label_number_si() formats the large fiscal numbers to save space
+                      ),                                                     
+                      size = 4.5) + # making the label text larger for readability
       labs(
         title = paste(input$response_country1, "Covid-19 Cases over time"),
         y = "Cases",
@@ -317,14 +338,13 @@ server <- function(input, output) {
       theme(text = element_text(size = 20))
     
     
-    ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
-    ## major issue with the plot.
-    
-    
   })
   
   
   output$country1_deaths <- renderPlot({
+    
+    # same process as before but for deaths 
+    
     lab1 <- label()
     
     
@@ -361,6 +381,9 @@ server <- function(input, output) {
   
   
   label2 <- reactive({
+    
+    # same process but for a new country 
+    
     labels1 <- response %>%
       filter(CountryName == input$response_country2,
              RegionName == "") %>%
@@ -404,8 +427,9 @@ server <- function(input, output) {
   
   
   output$country2_cases <- renderPlot({
-    ## make labels reactive variable
+
     
+    # exact same code as before but for country two 
     lab1 <- label2()
     
     response %>%
@@ -441,8 +465,8 @@ server <- function(input, output) {
   })
   
   output$country2_deaths <- renderPlot({
-    ## make labels reactive variable
-    
+
+    # exact same code as before but for country two 
     lab1 <- label2()
     
     
@@ -472,23 +496,66 @@ server <- function(input, output) {
       theme(text = element_text(size = 20))
     
     
-    ## if i set the labels to the level of the policy and rename the policies to their shorthand descriptions then i have solved the final
-    ## major issue with the plot.
-    
     
   })
   
-  
+  #rendering the codebook so the reader can see what the shorthand policies refer to 
   output$codebook <- DT::renderDT({
     codebook
   })
   
+  ## Tab 3 --------------------------------------------------------------------
   
-  ## Tab 3 ----------------------------------------------------------------------
   
+  output$uk_plot <- renderPlot({
+    
+    # filtering out regional data and negative case values 
+    plot.data2 <- response %>%
+      filter(CountryName == "United Kingdom") %>% 
+      filter(RegionName %in% input$uk_regions) %>%
+      filter(RegionName != "",
+             DailyCases >= 0)## there are negative values in the datasets for some reason, i will just filter out for now
+    
+    
+    ggline2 <-
+      ggplot(plot.data2, aes_string(y = input$cd2)) + ## need to use aes_string to read input$datatype
+      geom_line(mapping = aes(x = Date, colour = RegionName)) +
+      labs(
+        title = "Covid-19 Cases and Deaths Over Time",
+        subtitle = "Comparing multiple countries",
+        y = "Cases/Deaths",
+        x = "Date"
+      ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) + 
+      theme_fivethirtyeight() +
+      theme(axis.title = element_text()) +
+      scale_color_brewer(palette = "Set1")
+    
+    # if statement which adds on a log scale if the box is selected 
+    if (input$logscale2)
+      ggline2 <- ggline2 + 
+      scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+                    labels = comma)
+    
+    return(ggline2)
+    
+    
+  })
+  
+  
+  ## Tab 4 --------------------------------------------------------------------
+  
+  
+  # This tab is being used for the purpose of downloading data and pdfs of the plots 
   vals <- reactiveValues()
   
   labels <- reactive({
+    
+    # Same process used in the policy tab 
     label2 <- response %>%
       filter(CountryName == input$country_plot,
              RegionName == "") %>%
@@ -578,7 +645,7 @@ server <- function(input, output) {
     
     print(gg)
     
-    vals$gg <- gg
+    vals$gg <- gg # the reactive values are used by the download button 
     
   })
   
@@ -637,10 +704,10 @@ server <- function(input, output) {
   
   output$download <- downloadHandler(
     filename = function() {
-      paste(input$country_plot, '_cases.pdf', sep = '')
+      paste(input$country_plot, '_cases.pdf', sep = '') # creates the name of the file
     },
     
-    content = function(file) {
+    content = function(file) {            # downloading the cases plot
       pdf(file, width = 14 , height = 8)
       print(vals$gg)
       dev.off()
@@ -650,11 +717,11 @@ server <- function(input, output) {
   
   output$download2 <- downloadHandler(
     filename = function() {
-      paste(input$country_plot, '.csv', sep = '')
+      paste(input$country_plot, '.csv', sep = '')  
     },
     
-    content = function(file) {
-      write.csv(labels(), file)
+    content = function(file) { 
+      write.csv(labels(), file) # downloading the unfiltered data with both start and end dates for selected policies 
     }
   )
   
@@ -665,17 +732,17 @@ server <- function(input, output) {
     },
     
     content = function(file) {
-      pdf(file, width = 14 , height = 8)
+      pdf(file, width = 14 , height = 8) # downloading plot of deaths for selected country 
       print(vals2$gg2)
       dev.off()
     }
   )
   
 
-  
-  output$animated_map <- renderPlot({
+  ## Tab 5 ----------------------------------------------------------------------  
+  output$animated_map <- renderPlot({  ## World map output 
     
-    options(scipen = 999)
+    options(scipen = 999) # to get rid of the scientific notation in the generated labels 
     
     map %>% 
       filter(Date == input$date_slider) %>%
