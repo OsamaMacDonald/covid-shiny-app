@@ -8,6 +8,10 @@ library(scales)
 library(shinythemes)
 library(ggrepel)
 library(scales)
+library(maps)
+library(gganimate)
+library(plotly)
+
 response <- read.csv("response_clean.csv")
 
 ## Setting Date Format
@@ -15,7 +19,8 @@ response$Date <- ymd(response$Date)
 
 codebook <- read.csv("codebook.csv")
 
-
+map <- read.csv("time_series_covid19_confirmed_global_narrow_clean.csv")
+map$Date <- ymd(map$Date)
 
 ## Shiny App code -------------------------------------------------------------
 ui <- fluidPage(
@@ -173,8 +178,23 @@ ui <- fluidPage(
         fluidRow(downloadButton("download3",
                                 "Download Plot"))
       )
-    )
+    ),
     
+    tabPanel(
+      title = "World Map",
+      
+      sidebarLayout(
+        sidebarPanel(
+          sliderInput(inputId = "date_slider", 
+                      label = "Dates:",
+                      min = as.Date(min(map$Date)),
+                      max = as.Date(max(map$Date)),
+                      value = as.Date(min(map$Date)), 
+                      step = 1,
+                      animate = animationOptions(interval = 1800))),
+        mainPanel(plotOutput(outputId = "animated_map", height = "70vh")))
+      
+    )
     
     
   )
@@ -651,7 +671,23 @@ server <- function(input, output) {
     }
   )
   
+
   
+  output$animated_map <- renderPlot({
+    
+    options(scipen = 999)
+    
+    map %>% 
+      filter(Date == input$date_slider) %>%
+      ggplot() +
+      borders("world", colour = "gray90", fill = "gray85") +
+      theme_map() + 
+      geom_point(aes(x = Long, y = Lat, size = Value), 
+                 colour = "red", alpha = 0.55) +
+      labs(size = "Cases") + 
+      ggtitle("Distribution of Confirmed Covid-19 Cases") 
+  })
+
   
   
 }
