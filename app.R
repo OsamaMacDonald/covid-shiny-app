@@ -25,6 +25,9 @@ map$Date <- ymd(map$Date)
 
 
 
+
+
+
 ## UI code --------------------------------------------------------------------
 ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
@@ -115,9 +118,11 @@ ui <- fluidPage(
     
     
     ## Panel 3 ----------------------------------------------------------------
-    tabPanel(title = "United Kingdom Sub-Regional Policies",
+    tabPanel(title = "United Kingdom Sub-Regional Data",
              
-             selectInput(
+             fluidRow(
+              column(2,
+              selectInput(
                "uk_regions",
                "Select Country",
                multiple = TRUE,
@@ -131,9 +136,10 @@ ui <- fluidPage(
                choices = c("DailyCases", "DailyDeaths"),
                selected = "DailyCases"
              ),
-             checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE),
+             checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE)),
              
-             plotOutput("uk_plot")
+             column(10,
+             plotOutput("uk_plot")))
              
              
             ),
@@ -162,6 +168,29 @@ ui <- fluidPage(
           multiple = TRUE,
           choices = unique(response$policy),
           selected = "Sch"
+        )
+      ),
+      
+      column(
+        2,
+        sliderInput(
+          "text_size",
+          "Adjust Label Text Size",
+          min = 3,
+          max = 6,
+          step = .25,
+          value = 4.5
+        )
+             
+             ),
+      column(
+        2,
+        sliderInput(
+          "force_value",
+          "Adjust Label Y-axis Repulsion",
+          min = 3,
+          max = 15,
+          value = 9
         )
       )),
       column(
@@ -328,12 +357,20 @@ server <- function(input, output) {
                         y = DailyCases,
                         label = paste(policy, "", label_number_si()(value)) # label_number_si() formats the large fiscal numbers to save space
                       ),                                                     
+                      direction = "y",
+                      force = 6,
+                      min.segment.length = 100,
                       size = 4.5) + # making the label text larger for readability
       labs(
         title = paste(input$response_country1, "Covid-19 Cases over time"),
         y = "Cases",
         x = "Date"
       ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) + 
       theme_classic() +
       theme(text = element_text(size = 20))
     
@@ -358,21 +395,28 @@ server <- function(input, output) {
         width = .3,
         alpha = 0.01
       ) +
-      geom_text(
+      geom_text_repel(
         data = lab1,
         aes(
           x = Date,
           y = DailyDeaths,
           label = paste(policy, "", label_number_si()(value))
         ),
-        size = 4.5,
-        check_overlap = TRUE
+        direction = "y",
+        force = 6,
+        min.segment.length = 100,
+        size = 4.5
       ) +
       labs(
         title = paste(input$response_country1, "Covid-19 Deaths over time"),
         y = "Deaths",
         x = "Date"
       ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) + 
       theme_classic() +
       theme(text = element_text(size = 20))
     
@@ -448,12 +492,20 @@ server <- function(input, output) {
                         y = DailyCases,
                         label = paste(policy, "", label_number_si()(value))
                       ),
+                      direction = "y",
+                      force = 6,
+                      min.segment.length = 100,
                       size = 4.5) +
       labs(
         title = paste(input$response_country2, "Covid-19 Cases over time"),
         y = "Cases",
         x = "Date"
       ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) + 
       theme_classic() +
       theme(text = element_text(size = 20))
     
@@ -486,12 +538,20 @@ server <- function(input, output) {
                         y = DailyDeaths,
                         label = paste(policy, "", label_number_si()(value))
                       ),
+                      direction = "y",
+                      force = 6,
+                      min.segment.length = 100,
                       size = 4.5) +
       labs(
         title = paste(input$response_country2, "Covid-19 Deaths over time"),
         y = "Deaths",
         x = "Date"
       ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0)
+      ) + 
       theme_classic() +
       theme(text = element_text(size = 20))
     
@@ -522,7 +582,7 @@ server <- function(input, output) {
       geom_line(mapping = aes(x = Date, colour = RegionName)) +
       labs(
         title = "Covid-19 Cases and Deaths Over Time",
-        subtitle = "Comparing multiple countries",
+        subtitle = "Comparing the regions of the United kingdom",
         y = "Cases/Deaths",
         x = "Date"
       ) +
@@ -623,9 +683,9 @@ server <- function(input, output) {
           label = paste(policy, "", label_number_si()(value))
         ),
         direction = "y",
-        force = 6,
+        force = input$force_value,
         min.segment.length = 100,
-        size = 4.5
+        size = input$text_size
       ) +
       labs(
         title = paste(input$country_plot, "Covid-19 Cases over time"),
@@ -673,9 +733,9 @@ server <- function(input, output) {
           label = paste(policy, "",  label_number_si()(value))
         ),
         direction = "y",
-        force = 6,
+        force = input$force_value,
         min.segment.length = 100,
-        size = 4.5
+        size = input$text_size
       ) +
       labs(
         title = paste(input$country_plot, "Covid-19 Deaths over time"),
