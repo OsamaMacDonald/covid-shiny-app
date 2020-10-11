@@ -366,7 +366,7 @@ server <- function(input, output) {
       theme(axis.title = element_text()) +
       scale_color_brewer(palette = "Set1") +
       theme(text = element_text(size=16)) +
-      + guides(color = guide_legend(override.aes = list(size = 2)))
+      guides(color = guide_legend(override.aes = list(size = 2)))
     
     
     if (input$logscale2)
@@ -720,7 +720,8 @@ server <- function(input, output) {
       theme_fivethirtyeight() +
       theme(axis.title = element_text()) +
       scale_color_brewer(palette = "Set1") +
-      theme(text = element_text(size=16))
+      theme(text = element_text(size=16)) + 
+      guides(color = guide_legend(override.aes = list(size = 2)))
     
     # if statement which adds on a log scale if the box is selected 
     if (input$logscale2)
