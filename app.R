@@ -23,6 +23,16 @@ map2 <- read.csv("map-data.csv") # world map data
 map2$date <- ymd(map2$date)
 
 
+lineplot_labels1 <- c("Cases" = "DailyCases", # creating better input select values 
+                      "Deaths" = "DailyDeaths")
+
+lineplot_labels2 <- c("Cases" = "new_cases_per_100k",
+                      "Deaths" = "new_deaths_per_100k")
+
+lineplot_labels3 <- c("Cases" = "DailyCases",
+                      "Deaths" = "DailyDeaths")
+
+
 ## UI code --------------------------------------------------------------------
 ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
@@ -44,8 +54,8 @@ ui <- fluidPage(
                  selectInput(
                    "cd",
                    "Select Cases/Deaths",
-                   choices = c("DailyCases", "DailyDeaths"),
-                   selected = "DailyCases"
+                   choices = c(lineplot_labels1),
+                   selected = lineplot_labels1[1]
                  ),
                  checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE),
                  
@@ -73,8 +83,8 @@ ui <- fluidPage(
                  selectInput(
                    "per_capita_cd",
                    "Select Cases/Deaths Per Capita",
-                   choices = c("new_cases_per_100k", "new_deaths_per_100k"),
-                   selected = "new_cases_per_100k"
+                   choices = c(lineplot_labels2),
+                   selected = lineplot_labels2[1]
                  ),
                  
                  checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE),
@@ -171,8 +181,8 @@ ui <- fluidPage(
              selectInput(
                "cd2",
                "Select Cases/Deaths",
-               choices = c("DailyCases", "DailyDeaths"),
-               selected = "DailyCases"
+               choices = c(lineplot_labels3),
+               selected = lineplot_labels3[1]
              ),
              checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE)),
              
@@ -301,7 +311,7 @@ server <- function(input, output) {
       labs(
         title = "Covid-19 Cases and Deaths Over Time",
         subtitle = "Comparing multiple countries",
-        y = "Cases/Deaths",
+        y = names(lineplot_labels1[which(lineplot_labels1 == input$cd)]), # displays cases or deaths instead of input variable name 
         x = "Date"
       ) +
       scale_x_date(
@@ -342,7 +352,7 @@ server <- function(input, output) {
       labs(
         title = "Covid-19 Cases and Deaths Over Time per capita (100k)",
         subtitle = "Comparing multiple countries",
-        y = "Cases/Deaths",
+        y = names(lineplot_labels2[which(lineplot_labels2 == input$per_capita_cd)]),
         x = "Date"
       ) +
       scale_x_date(
@@ -695,7 +705,7 @@ server <- function(input, output) {
       labs(
         title = "Covid-19 Cases and Deaths Over Time",
         subtitle = "Comparing the regions of the United kingdom",
-        y = "Cases/Deaths",
+        y = names(lineplot_labels3[which(lineplot_labels3 == input$cd2)]),
         x = "Date"
       ) +
       scale_x_date(
