@@ -924,7 +924,8 @@ server <- function(input, output) {
       geom_point(aes(x = Longitude..average., y = Latitude..average., size = total_cases_per_100k), 
                  colour = "red", alpha = 0.55) +
       labs(size = "Cases per 100k") + 
-      ggtitle("Total Covid-19 Cases over time per 100k population") 
+      ggtitle("Total Covid-19 Cases over time per 100k population") +
+      theme(text = element_text(size=20))
   })
 
   
