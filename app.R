@@ -28,11 +28,11 @@ ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
   tabsetPanel(
     
-    ## Panel 1 ----------------------------------------------------------------
+## Panel 1 ----------------------------------------------------------------
     tabPanel(title = "Daily Covid-19 cases and deaths by day",
              fluidRow(
                column(
-                 4,
+                 2,
                  selectInput(
                    "country",
                    "Select Country",
@@ -47,10 +47,13 @@ ui <- fluidPage(
                    choices = c("DailyCases", "DailyDeaths"),
                    selected = "DailyCases"
                  ),
-                 checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE)
+                 checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE),
+                 
+                 downloadButton("lineplot1", 
+                                "Download Plot")
                ),
                
-               column(8,
+               column(10,
                       
                       plotOutput("plot"))
              ),
@@ -58,7 +61,7 @@ ui <- fluidPage(
              
              fluidRow(
                column(
-                 4, 
+                 2, 
                   selectInput(
                    "country2",
                    "Select Country",
@@ -76,10 +79,13 @@ ui <- fluidPage(
                  
                  checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE),
                  
+                 downloadButton("lineplot2",
+                                "Download Plot")
+                 
                ),
                
                column(
-                 8,
+                 10,
                  plotOutput("per_capita_plot")
                )
                
@@ -278,6 +284,7 @@ server <- function(input, output) {
   ## Tab 1 --------------------------------------------------------------------
   
   
+  line_vals <- reactiveValues()
   
   output$plot <- renderPlot({
     
@@ -312,10 +319,15 @@ server <- function(input, output) {
         scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
                       labels = comma)
     
+    line_vals$plot1 <- ggline
+    
     return(ggline)
     
     
   })
+  
+  
+  line_vals2 <- reactiveValues()
   
   output$per_capita_plot <- renderPlot({
     
@@ -348,6 +360,7 @@ server <- function(input, output) {
       scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
                     labels = comma)
     
+    line_vals2$plot2 <- ggline2
     
     return(ggline2)
     
@@ -355,6 +368,34 @@ server <- function(input, output) {
     
     
   })
+  
+  
+  
+  output$lineplot1 <- downloadHandler(
+    filename = function() {
+      paste('line_plot_1.pdf', sep = '') # creates the name of the file
+    },
+    
+    content = function(file) {            # downloading the cases plot
+      pdf(file, width = 14 , height = 8)
+      print(line_vals$plot1)
+      dev.off()
+    }
+  )
+  
+  
+  output$lineplot2 <- downloadHandler(
+    filename = function() {
+      paste('line_plot_2.pdf', sep = '') # creates the name of the file
+    },
+    
+    content = function(file) {            # downloading the cases plot
+      pdf(file, width = 14 , height = 8)
+      print(line_vals2$plot2)
+      dev.off()
+    }
+  )
+  
   
   ## Tab 2 --------------------------------------------------------------------
   
@@ -893,6 +934,8 @@ server <- function(input, output) {
 
 
 shinyApp(ui = ui, server = server)
+
+
 
 
 
