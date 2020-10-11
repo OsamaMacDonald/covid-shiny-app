@@ -17,15 +17,10 @@ response <- read.csv("response_clean.csv")
 ## Setting Date Format
 response$Date <- ymd(response$Date)
 
-codebook <- read.csv("codebook.csv")
+codebook <- read.csv("codebook.csv") # codebook with policy details
 
-map <- read.csv("time_series_covid19_confirmed_global_narrow_clean.csv")
-
-map$Date <- ymd(map$Date)
-
-
-
-
+map2 <- read.csv("map-data.csv") # world map data 
+map2$date <- ymd(map2$date)
 
 
 ## UI code --------------------------------------------------------------------
@@ -221,9 +216,9 @@ ui <- fluidPage(
         sidebarPanel(
           sliderInput(inputId = "date_slider", 
                       label = "Dates:",
-                      min = as.Date(min(map$Date)),
-                      max = as.Date(max(map$Date)),
-                      value = as.Date(min(map$Date)), 
+                      min = as.Date(min(map2$date)),
+                      max = as.Date(max(map2$date)),
+                      value = as.Date(min(map2$date)), 
                       step = 1,
                       animate = animationOptions(interval = 1800))),
         mainPanel(plotOutput(outputId = "animated_map", height = "70vh")))
@@ -804,15 +799,15 @@ server <- function(input, output) {
     
     options(scipen = 999) # to get rid of the scientific notation in the generated labels 
     
-    map %>% 
-      filter(Date == input$date_slider) %>%
+    map2 %>% 
+      filter(date == input$date_slider) %>%
       ggplot() +
       borders("world", colour = "gray90", fill = "gray85") +
       theme_map() + 
-      geom_point(aes(x = Long, y = Lat, size = Value), 
+      geom_point(aes(x = Longitude..average., y = Latitude..average., size = total_cases_per_100k), 
                  colour = "red", alpha = 0.55) +
-      labs(size = "Cases") + 
-      ggtitle("Distribution of Confirmed Covid-19 Cases") 
+      labs(size = "Cases per 100k") + 
+      ggtitle("Total Covid-19 Cases over time per 100k population") 
   })
 
   
@@ -821,9 +816,6 @@ server <- function(input, output) {
 
 
 
-
-
-## it wasn't plotting the multiple lines correctly before but it is now, no idea why. 
 shinyApp(ui = ui, server = server)
 
 
