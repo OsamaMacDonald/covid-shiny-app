@@ -30,8 +30,9 @@ ui <- fluidPage(
     
     ## Panel 1 ----------------------------------------------------------------
     tabPanel(title = "Daily Covid-19 cases and deaths by day",
-             sidebarLayout(
-               sidebarPanel(
+             fluidRow(
+               column(
+                 4,
                  selectInput(
                    "country",
                    "Select Country",
@@ -49,11 +50,47 @@ ui <- fluidPage(
                  checkboxInput("logscale", "Display Y-axis in log10 scale", FALSE)
                ),
                
+               column(8,
+                      
+                      plotOutput("plot"))
+             ),
+             
+             
+             fluidRow(
+               column(
+                 4, 
+                  selectInput(
+                   "country2",
+                   "Select Country",
+                   multiple = TRUE,
+                   choices = unique(map2$location),
+                   selected = "United Kingdom"
+                 ),
+                 
+                 selectInput(
+                   "per_capita_cd",
+                   "Select Cases/Deaths Per Capita",
+                   choices = c("new_cases_per_100k", "new_deaths_per_100k"),
+                   selected = "new_cases_per_100k"
+                 ),
+                 
+                 checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE),
+                 
+               ),
                
+               column(
+                 8,
+                 plotOutput("per_capita_plot")
+               )
                
-               
-               mainPanel(plotOutput("plot"))
-             )),
+             )
+             
+             
+             
+             
+             
+             
+             ),
     ## Panel 2 ----------------------------------------------------------------
     tabPanel(
       title = "Government Policy Responses to Covid-19",
@@ -276,6 +313,45 @@ server <- function(input, output) {
                       labels = comma)
     
     return(ggline)
+    
+    
+  })
+  
+  output$per_capita_plot <- renderPlot({
+    
+    plot.data2 <- map2 %>%
+      filter(location %in% input$country2)
+    
+    
+    
+    ggline2 <-
+      ggplot(plot.data2, aes_string(y = input$per_capita_cd)) + ## need to use aes_string to read input$datatype
+      geom_line(mapping = aes(x = date, colour = location)) +
+      labs(
+        title = "Covid-19 Cases and Deaths Over Time per capita (100k)",
+        subtitle = "Comparing multiple countries",
+        y = "Cases/Deaths",
+        x = "Date"
+      ) +
+      scale_x_date(
+        date_breaks = "months" ,
+        date_labels = "%d-%b",
+        expand = c(0, 0) # stops the plot going further than the available dates 
+      ) +
+      theme_fivethirtyeight() +
+      theme(axis.title = element_text()) +
+      scale_color_brewer(palette = "Set1")
+    
+    
+    if (input$logscale2)
+      ggline2 <- ggline2 + 
+      scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+                    labels = comma)
+    
+    
+    return(ggline2)
+    
+    
     
     
   })
@@ -734,7 +810,7 @@ server <- function(input, output) {
       ) +
       labs(
         title = paste(input$country_plot, "Covid-19 Deaths over time"),
-        y = "Cases",
+        y = "Deaths",
         x = "Date"
       ) +
       scale_y_continuous(breaks = pretty_breaks()) +
