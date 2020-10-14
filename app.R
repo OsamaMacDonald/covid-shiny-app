@@ -31,7 +31,8 @@ lineplot_labels2 <- c("Cases" = "new_cases_per_100k",
 
 lineplot_labels3 <- c("Cases" = "DailyCases",
                       "Deaths" = "DailyDeaths")
-
+regional_labels <- c("Cases" = "DailyCases",
+                     "Deaths" = "DailyDeaths")
 
 ## UI code --------------------------------------------------------------------
 ui <- fluidPage(
@@ -107,7 +108,7 @@ ui <- fluidPage(
              
              
              ),
-    ## Panel 2 ----------------------------------------------------------------
+## Panel 2 ----------------------------------------------------------------
     tabPanel(
       title = "Government Policy Responses to Covid-19",
       
@@ -165,7 +166,7 @@ ui <- fluidPage(
     
     
     
-    ## Panel 3 ----------------------------------------------------------------
+## Panel 3 ----------------------------------------------------------------
     tabPanel(title = "United Kingdom Sub-Regional Data",
              
              fluidRow(
@@ -187,13 +188,46 @@ ui <- fluidPage(
              checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE)),
              
              column(10,
-             plotOutput("uk_plot")))
+             plotOutput("uk_plot"))),
+             
+             fluidRow(
+               column(2,
+                      selectInput(
+                        "region1",
+                        "Select First Region",
+                        choices = c("England", "Scotland", "Wales", "Northern Ireland"),
+                        selected = "England"
+                      )),
+               column(2,
+                      selectInput(
+                        "region2",
+                        "Select Second Region",
+                        choices = c("England", "Scotland", "Wales", "Northern Ireland"),
+                        selected = "Scotland"
+                      )),
+               
+               column(2,
+               selectInput(
+                 "cases_or_deaths",
+                 "Select Cases or Deaths",
+                 choices = c(regional_labels),
+                 selected = regional_labels
+               ))
+             ),
+             
+             fluidRow(
+               column(6,
+                      plotOutput("region1")),
+               column(6,
+                      plotOutput("region2"))
+               
+             )
              
              
             ),
     
     
-    ## Panel 4 ----------------------------------------------------------------
+## Panel 4 ----------------------------------------------------------------
     tabPanel(
       title = "Analysis Plot Renders",
       
@@ -261,7 +295,7 @@ ui <- fluidPage(
       )
     ),
     
-    ## Panel 5 ----------------------------------------------------------------
+## Panel 5 ----------------------------------------------------------------
     tabPanel(
       title = "World Map",
       
@@ -288,10 +322,10 @@ ui <- fluidPage(
 
 
 
-  ## Server Code --------------------------------------------------------------
+## Server Code --------------------------------------------------------------
 
 server <- function(input, output) {
-  ## Tab 1 --------------------------------------------------------------------
+## Tab 1 --------------------------------------------------------------------
   
   
   line_vals <- reactiveValues()
@@ -411,7 +445,7 @@ server <- function(input, output) {
   )
   
   
-  ## Tab 2 --------------------------------------------------------------------
+## Tab 2 --------------------------------------------------------------------
   
   ## creating a reactive variable as these labels are used multiple times 
   label <- reactive({
@@ -690,7 +724,7 @@ server <- function(input, output) {
     codebook
   })
   
-  ## Tab 3 --------------------------------------------------------------------
+## Tab 3 --------------------------------------------------------------------
   
   
   output$uk_plot <- renderPlot({
@@ -734,8 +768,15 @@ server <- function(input, output) {
     
   })
   
+  output$region1 <- renderPlot({
+    
+    
+    
+  })
   
-  ## Tab 4 --------------------------------------------------------------------
+  
+  
+## Tab 4 --------------------------------------------------------------------
   
   
   # This tab is being used for the purpose of downloading data and pdfs of the plots 
@@ -927,7 +968,7 @@ server <- function(input, output) {
   )
   
 
-  ## Tab 5 ----------------------------------------------------------------------  
+## Tab 5 ----------------------------------------------------------------------  
   output$animated_map <- renderPlot({  ## World map output 
     
     options(scipen = 999) # to get rid of the scientific notation in the generated labels 
