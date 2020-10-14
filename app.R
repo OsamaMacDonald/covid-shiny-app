@@ -34,6 +34,10 @@ lineplot_labels3 <- c("Cases" = "DailyCases",
 regional_labels <- c("Cases" = "DailyCases",
                      "Deaths" = "DailyDeaths")
 
+
+
+
+
 ## UI code --------------------------------------------------------------------
 ui <- fluidPage(
   headerPanel("Countries Covid-19 Policy Response App"),
@@ -109,10 +113,17 @@ ui <- fluidPage(
              
              ),
 ## Panel 2 ----------------------------------------------------------------
+
+
     tabPanel(
       title = "Government Policy Responses to Covid-19",
       
+      
+ 
+      
       fluidRow(
+        
+        
         column(
           2,
           selectInput(
@@ -143,7 +154,18 @@ ui <- fluidPage(
             choices = unique(response$policy),
             selected = "Sch"
           )
+        ),
+        
+        
+        column(
+          6,
+          h2("How To Use"),
+          p("In this tab, a user can select two countries to compare which non-pharmaceutical interventions they implemented. The policies dropdown 
+            contains a list of codes which represent the interventions. At the bottom of the page is a codebook which the user can use to familiarise 
+            themselves with what the interventions and their levels represent.")
+          
         )
+        
       ),
       
       
@@ -185,43 +207,15 @@ ui <- fluidPage(
                choices = c(lineplot_labels3),
                selected = lineplot_labels3[1]
              ),
-             checkboxInput("logscale2", "Display Y-axis in log10 scale", FALSE)),
+             checkboxInput("logscale3", "Display Y-axis in log10 scale", FALSE),
+             
+             h2("Info"),
+             p("This tab contains the sub-regional cases and deaths data for the United Kingdom")
+             
+             ),
              
              column(10,
              plotOutput("uk_plot"))),
-             
-             fluidRow(
-               column(2,
-                      selectInput(
-                        "region1",
-                        "Select First Region",
-                        choices = c("England", "Scotland", "Wales", "Northern Ireland"),
-                        selected = "England"
-                      )),
-               column(2,
-                      selectInput(
-                        "region2",
-                        "Select Second Region",
-                        choices = c("England", "Scotland", "Wales", "Northern Ireland"),
-                        selected = "Scotland"
-                      )),
-               
-               column(2,
-               selectInput(
-                 "cases_or_deaths",
-                 "Select Cases or Deaths",
-                 choices = c(regional_labels),
-                 selected = regional_labels
-               ))
-             ),
-             
-             fluidRow(
-               column(6,
-                      plotOutput("region1")),
-               column(6,
-                      plotOutput("region2"))
-               
-             )
              
              
             ),
@@ -274,7 +268,13 @@ ui <- fluidPage(
           max = 15,
           value = 9
         )
-      )),
+      ),
+      column(4,
+      h2("Info"),
+      p("This tab allows a user to focus on a specific country and their interventions. The user can adjust the sliders to change
+        the labels text size as well as how far away they are from each other in the Y-axis dimension."))
+      
+      ),
       column(
         8,
         plotOutput("country_plot_render"),
@@ -299,22 +299,36 @@ ui <- fluidPage(
     tabPanel(
       title = "World Map",
       
-      sidebarLayout(
-        sidebarPanel(
+      fluidRow(
+        
+      column(2,
           sliderInput(inputId = "date_slider", 
                       label = "Dates:",
                       min = as.Date(min(map2$date)),
                       max = as.Date(max(map2$date)),
                       value = as.Date(min(map2$date)), 
                       step = 1,
-                      animate = animationOptions(interval = 1800))),
-        mainPanel(plotOutput(outputId = "animated_map", height = "70vh")))
+                      animate = animationOptions(interval = 1800)),
+          
+        h2("Info"),
+        p("This tab contains a world map with the per one hundred thousand cases plotted as circles on the map. The user can use the slider
+          to select differnt dates to see how countries cases have changed over time")),
+      
+        
+      column(
+        10,
+        plotOutput(outputId = "animated_map", height = "70vh")))
       
     )
     
     
   )
 )
+
+
+
+
+
 
 
 
@@ -758,21 +772,18 @@ server <- function(input, output) {
       guides(color = guide_legend(override.aes = list(size = 2)))
     
     # if statement which adds on a log scale if the box is selected 
-    if (input$logscale2)
+    if (input$logscale3)
       ggline2 <- ggline2 + 
       scale_y_log10(breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
                     labels = comma)
+    
+  
     
     return(ggline2)
     
     
   })
   
-  output$region1 <- renderPlot({
-    
-    
-    
-  })
   
   
   
